@@ -1,16 +1,16 @@
 use actors::Actor;
 
-use ping::{Message, Ping};
+use ping::{Ping, PingMsg};
 
 mod ping;
-mod pong;
 
 #[tokio::main]
 async fn main() {
     let actor = Ping {};
     let addr = actor.start();
 
-    addr.do_send(Message::Ping);
+    let response = addr.send(PingMsg {}).await.unwrap();
+    println!("{}", response);
 
     addr.wait().await;
 }

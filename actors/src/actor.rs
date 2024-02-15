@@ -17,13 +17,9 @@ impl<A: Actor> Context<A> {
 pub trait Actor
 where
     Self: Sized + Send + 'static,
-    Self::Message: Send,
 {
-    type Message;
-
     async fn started(&mut self, _ctx: &Context<Self>) {}
     async fn stopped(&mut self, _ctx: &Context<Self>) {}
-    async fn handle(&mut self, _ctx: &Context<Self>, _msg: Self::Message);
 
     fn start(mut self) -> Addr<Self> {
         let (tx, mut rx) = mpsc::channel(5);
@@ -43,7 +39,9 @@ where
                         return;
                     }
                     msg = rx.recv() => match msg {
-                        Some(msg) => self.handle(&ctx, msg).await,
+                        Some(mut proxy) => {
+                            proxy.handle(&mut self, &ctx).await;
+                        }
                         None => {
                             ctx.addr().stop();
                             continue;

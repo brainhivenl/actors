@@ -1,10 +1,13 @@
-use tokio::sync::mpsc::Sender;
+use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
-use crate::Actor;
+use crate::{
+    handler::{MessageProxy, Proxy},
+    Actor, Handler, Message,
+};
 
 pub struct Addr<A: Actor> {
-    tx: Sender<A::Message>,
+    tx: mpsc::Sender<Box<dyn Proxy<A>>>,
     token: CancellationToken,
 }
 
@@ -21,7 +24,7 @@ where
 }
 
 impl<A: Actor> Addr<A> {
-    pub fn new(tx: Sender<A::Message>) -> Self {
+    pub fn new(tx: mpsc::Sender<Box<dyn Proxy<A>>>) -> Self {
         Addr {
             tx,
             token: CancellationToken::new(),
@@ -32,11 +35,34 @@ impl<A: Actor> Addr<A> {
         self.token.cancel();
     }
 
-    pub fn do_send(&self, msg: A::Message) {
+    pub async fn send<M>(&self, msg: M) -> Result<M::Result, oneshot::error::RecvError>
+    where
+        A: Handler<M>,
+        M: Message + Send + 'static,
+        M::Result: Send,
+    {
+        let tx = self.tx.clone();
+        let (mtx, mrx) = oneshot::channel();
+
+        tokio::spawn(async move {
+            let proxy = MessageProxy::new(msg, Some(mtx));
+            let _ = tx.send(Box::new(proxy)).await;
+        });
+
+        mrx.await
+    }
+
+    pub fn do_send<M>(&self, msg: M)
+    where
+        A: Handler<M>,
+        M: Message + Send + 'static,
+        M::Result: Send,
+    {
         let tx = self.tx.clone();
 
         tokio::spawn(async move {
-            let _ = tx.send(msg).await;
+            let proxy = MessageProxy::new(msg, None);
+            let _ = tx.send(Box::new(proxy)).await;
         });
     }
 
