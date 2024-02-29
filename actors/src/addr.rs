@@ -70,3 +70,9 @@ impl<A: Actor> Addr<A> {
         self.token.cancelled().await;
     }
 }
+
+impl<A: Actor> Drop for Addr<A> {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}

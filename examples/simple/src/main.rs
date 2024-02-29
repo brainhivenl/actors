@@ -7,10 +7,10 @@ mod ping;
 #[tokio::main]
 async fn main() {
     let actor = Ping {};
-    let addr = actor.start();
+    let addr1 = actor.start();
 
-    let response = addr.send(PingMsg {}).await.unwrap();
+    let response = addr1.send(PingMsg {}).await.unwrap();
     println!("{}", response);
 
-    addr.wait().await;
+    addr1.wait().await;
 }
