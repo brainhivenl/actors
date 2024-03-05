@@ -8,7 +8,7 @@ use crate::{
 
 pub struct Addr<A: Actor> {
     tx: mpsc::Sender<Box<dyn Proxy<A>>>,
-    token: CancellationToken,
+    pub(crate) token: CancellationToken,
 }
 
 impl<A> Clone for Addr<A>
@@ -24,11 +24,8 @@ where
 }
 
 impl<A: Actor> Addr<A> {
-    pub fn new(tx: mpsc::Sender<Box<dyn Proxy<A>>>) -> Self {
-        Addr {
-            tx,
-            token: CancellationToken::new(),
-        }
+    pub fn new(tx: mpsc::Sender<Box<dyn Proxy<A>>>, token: CancellationToken) -> Self {
+        Addr { tx, token }
     }
 
     pub fn stop(&self) {
@@ -68,11 +65,5 @@ impl<A: Actor> Addr<A> {
 
     pub async fn wait(&self) {
         self.token.cancelled().await;
-    }
-}
-
-impl<A: Actor> Drop for Addr<A> {
-    fn drop(&mut self) {
-        self.stop();
     }
 }
