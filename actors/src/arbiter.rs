@@ -3,7 +3,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{Actor, Addr, Context};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Arbiter {
     token: CancellationToken,
 }
