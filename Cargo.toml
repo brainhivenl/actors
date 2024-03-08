@@ -1,4 +1,4 @@
 [workspace]
-members = ["actors", "examples/simple"]
+members = ["actors", "actors-macros", "examples/simple"]
 
 resolver = "2"

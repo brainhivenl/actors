@@ -1,14 +1,13 @@
 use std::time::Duration;
 
-use actors::{async_trait, Actor, Handler, Message};
+use actors::{async_trait, Actor, Handler};
+use actors_macros::{result_type, Message};
 
 pub struct Ping;
 
+#[derive(Message)]
+#[result_type(i32)]
 pub struct PingMsg;
-
-impl Message for PingMsg {
-    type Result = i32;
-}
 
 #[async_trait]
 impl Actor for Ping {

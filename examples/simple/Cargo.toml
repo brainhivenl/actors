@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 actors = { path = "../../actors" }
+actors-macros = { path = "../../actors-macros" }
 tokio = { version = "1.36.0", features = ["full"] }
