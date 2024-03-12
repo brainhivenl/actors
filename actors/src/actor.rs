@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin, time::Duration};
+use std::{future::Future, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use tokio::task::JoinHandle;
@@ -18,21 +18,32 @@ impl<A: Actor> Context<A> {
         &self.addr
     }
 
-    pub fn run_interval<F>(&self, dur: Duration, f: F) -> JoinHandle<()>
+    pub fn run_background<F, Fut>(&self, f: F) -> JoinHandle<()>
     where
-        F: for<'a> Fn(&'a Context<A>) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>>
-            + Send
-            + 'static,
+        Fut: Future<Output = ()> + Send + 'static,
+        F: FnOnce(Context<A>) -> Fut + Send + Sync + 'static,
     {
         let addr = self.addr.clone();
 
         tokio::spawn(async move {
-            let ctx = Context { addr };
+            f(Context { addr }).await;
+        })
+    }
+
+    pub fn run_interval<F, Fut>(&self, dur: Duration, f: F) -> JoinHandle<()>
+    where
+        Fut: Future<Output = ()> + Send + 'static,
+        F: Fn(Arc<Context<A>>) -> Fut + Send + Sync + 'static,
+    {
+        self.run_background(move |ctx| async move {
             let mut interval = tokio::time::interval(dur);
+            let rc = Arc::new(ctx);
 
             loop {
-                interval.tick().await;
-                f(&ctx).await;
+                tokio::select! {
+                    _ = interval.tick() => f(Arc::clone(&rc)).await,
+                    _ = rc.addr().wait() => break,
+                }
             }
         })
     }
