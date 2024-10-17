@@ -24,9 +24,15 @@ impl<A: Actor> Context<A> {
         F: FnOnce(Context<A>) -> Fut + Send + Sync + 'static,
     {
         let addr = self.addr.clone();
-
         tokio::spawn(async move {
-            f(Context { addr }).await;
+            let token = addr.token.clone();
+
+            tokio::select! {
+                _ = token.cancelled() => {
+                    return;
+                }
+                _ = f(Context { addr }) => {}
+            }
         })
     }
 
@@ -37,10 +43,12 @@ impl<A: Actor> Context<A> {
     {
         self.run_background(move |ctx| async move {
             let mut interval = tokio::time::interval(dur);
+            let token = ctx.addr().token.clone();
             let rc = Arc::new(ctx);
 
             loop {
                 tokio::select! {
+                    _ = token.cancelled() => break,
                     _ = interval.tick() => f(Arc::clone(&rc)).await,
                     _ = rc.addr().wait() => break,
                 }
@@ -50,7 +58,7 @@ impl<A: Actor> Context<A> {
 }
 
 #[async_trait]
-pub trait Actor
+pub trait Actor: Named
 where
     Self: Sized + Send + 'static,
 {
@@ -60,4 +68,8 @@ where
     fn start(self) -> Addr<Self> {
         spawn_actor(self, None)
     }
+}
+
+pub trait Named {
+    const NAME: &'static str;
 }

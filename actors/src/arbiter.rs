@@ -32,11 +32,13 @@ pub(crate) fn spawn_actor<A: Actor>(mut actor: A, token: Option<CancellationToke
     tokio::spawn(async move {
         let ctx = Context::new(addr2);
 
+        tracing::debug!({ name = A::NAME }, "starting actor");
         actor.started(&ctx).await;
 
         loop {
             select! {
                 _ = ctx.addr().wait() => {
+                    tracing::debug!({ name = A::NAME }, "stopping actor");
                     actor.stopped(&ctx).await;
                     return;
                 }

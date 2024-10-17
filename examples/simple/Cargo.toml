@@ -7,3 +7,4 @@ edition = "2021"
 actors = { path = "../../actors" }
 actors-macros = { path = "../../actors-macros" }
 tokio = { version = "1.36.0", features = ["full"] }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

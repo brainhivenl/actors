@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use tokio::sync::oneshot::Sender;
 
-use crate::{Actor, Context};
+use crate::{Actor, Context, Named};
 
 #[async_trait]
 pub trait Handler<M>
 where
-    Self: Actor,
+    Self: Actor + Named,
     M: Message + Send,
 {
     async fn handle(&mut self, ctx: &Context<Self>, msg: M) -> M::Result;

@@ -1,9 +1,10 @@
 [package]
 name = "actors"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["sync"] }
 tokio-util = { version = "0.7" }
+tracing = "0.1.40"

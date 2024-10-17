@@ -4,7 +4,7 @@ mod arbiter;
 mod handler;
 mod lazy;
 
-pub use actor::{Actor, Context};
+pub use actor::{Actor, Context, Named};
 pub use addr::Addr;
 pub use arbiter::Arbiter;
 pub use async_trait::async_trait;
