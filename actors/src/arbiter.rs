@@ -24,36 +24,34 @@ impl Arbiter {
 
 pub(crate) fn spawn_actor<A: Actor>(mut actor: A, token: Option<CancellationToken>) -> Addr<A> {
     let (tx, mut rx) = mpsc::channel(5);
-    let token = token.unwrap_or_default();
-
-    let addr = Addr::new(tx, token);
+    let addr = Addr::new(tx, token.unwrap_or_default());
     let addr2 = addr.clone();
 
     tokio::spawn(async move {
-        let ctx = Context::new(addr2);
+        let ctx = Context::new(addr);
 
-        tracing::debug!({ name = A::NAME }, "starting actor");
+        tracing::debug!({ actor = A::NAME }, "actor started");
         actor.started(&ctx).await;
 
-        loop {
+        'actor: loop {
             select! {
                 _ = ctx.addr().wait() => {
-                    tracing::debug!({ name = A::NAME }, "stopping actor");
+                    tracing::debug!({ actor = A::NAME }, "actor stopped");
                     actor.stopped(&ctx).await;
-                    return;
+                    break 'actor;
                 }
                 msg = rx.recv() => match msg {
-                    Some(mut proxy) => {
-                        proxy.handle(&mut actor, &ctx).await;
-                    }
+                    Some(mut proxy) => proxy.handle(&mut actor, &ctx).await,
                     None => {
                         ctx.addr().stop();
-                        continue;
+                        break 'actor;
                     }
                 }
             }
         }
+
+        tracing::warn!({ actor = A::NAME }, "actor exited");
     });
 
-    addr
+    addr2
 }
